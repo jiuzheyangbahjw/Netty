@@ -17,7 +17,7 @@ public class AioClient {
         //提供异步非阻塞通道实例，静态构造方法
         AsynchronousSocketChannel channel = AsynchronousSocketChannel.open();
         //指定连接的服务器地址，返回future，void即为没有返回数据
-        Future<Void> future = channel.connect(new InetSocketAddress("192.168.1.116", 7397));
+        Future<Void> future = channel.connect(new InetSocketAddress("116.198.198.135", 80));
         System.out.println("尝试对远程服务器192.168.1.116");
         //获得连接结果，null则为连接成功，否则抛出异常
         future.get();

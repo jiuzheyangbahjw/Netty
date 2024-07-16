@@ -35,7 +35,7 @@ public class AioClientHandler extends ChannelAdapter {
 
     @Override
     public void channelRead(ChannelHandler ctx, Object msg) {
-        System.out.println("服务端受到信息:"+new Date()+" "+msg+"\r\n");
+        System.out.println("客户端受到信息:"+new Date()+" "+msg+"\r\n");
         ctx.writeAndFlush("客户端信息处理success!!!\r\n");
     }
 }
