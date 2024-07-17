@@ -1,20 +1,19 @@
 package dyss.shop.demo1;
 
+import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
+import java.util.logging.Logger;
 
 /**
  * @author DYss东阳书生
  * @date 2024/7/17 10:02
  * @Description 描述
  */
-
 public class ByteBufferTest {
 
     @Test
@@ -124,6 +123,29 @@ public class ByteBufferTest {
             }
         }
         source.compact(); //写模式
+    }
+
+    @Test
+    public void test_FileChannel() throws IOException {
+        FileChannel data = new FileInputStream("src/main/resources/data.txt").getChannel();
+        FileChannel to = new FileOutputStream("src/main/resources/to.txt").getChannel();
+        data.transferTo(0,data.size(),to);
+        System.out.println("写入完毕");
+    }
+
+    @Test
+    public void test_FileChannel2() throws IOException {
+       try {
+           FileChannel from = new FileInputStream("src/main/resources/data.txt").getChannel();
+           FileChannel to = new FileOutputStream("src/main/resources/to.txt").getChannel();
+           long size = from.size();
+           for(long left = size; left>0;){
+               System.out.println("position:"+(size-left)+" left:"+left);
+               left-=from.transferTo(size-left,left,to);
+           }
+       }catch (Exception e){
+           e.printStackTrace();
+       }
     }
 
 
