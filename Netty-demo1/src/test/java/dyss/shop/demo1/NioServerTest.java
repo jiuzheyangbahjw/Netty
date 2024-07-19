@@ -2,12 +2,12 @@ package dyss.shop.demo1;
 
 import org.junit.Test;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -57,6 +57,25 @@ public class NioServerTest {
         }
     }
 
+    private static void split(ByteBuffer source) {
+        source.flip();
+        for (int i = 0; i < source.limit(); i++) {
+            // 找到一条完整消息
+            if (source.get(i) == '\n') {
+                int length = i + 1 - source.position();
+                // 把这条完整消息存入新的 ByteBuffer
+                ByteBuffer target = ByteBuffer.allocate(length);
+                // 从 source 读，向 target 写
+                for (int j = 0; j < length; j++) {
+                    target.put(source.get());
+                };
+            }
+        }
+        //如果 source 中没有获取到 `/n`，则说明没有执行读取数据，
+        //此时，position=16，limit=16
+        source.compact(); //🍒 让position变成剩余未读字节数
+    }
+
     @Test
     public void test_Multiplexing() throws Exception{
         /// 1. 创建 selector, 管理多个 channel
@@ -80,12 +99,93 @@ public class NioServerTest {
                     ServerSocketChannel channel = (ServerSocketChannel) key.channel(); //🍒
                     SocketChannel sc = channel.accept(); //🍅
 //                    sc.configureBlocking(false); //🍅
-                    SelectionKey scKey = sc.register(selector, SelectionKey.OP_READ, null); //🍒
+                    ByteBuffer buffer = ByteBuffer.allocate(16);
+                    SelectionKey scKey = sc.register(selector, SelectionKey.OP_READ, buffer); //🍒
                 } else if (key.isReadable()) { // 如果是 read
-                    key.cancel(); //暂时先不处理
+                    try {
+                        SocketChannel channel = (SocketChannel) key.channel();
+//                        ByteBuffer buffer = ByteBuffer.allocate(16);
+                        ByteBuffer buffer = (ByteBuffer) key.attachment();
+                        int read = channel.read(buffer);
+                        if (read==-1) {
+                            key.cancel();
+                        }else{
+                            //分离特殊字符\n
+                            split(buffer);
+                            //判断是否满
+                            if (buffer.position()==buffer.limit()){
+                                //关联新Buffer，扩容后改变关联
+                                ByteBuffer newBuffer = ByteBuffer.allocate(buffer.capacity() * 2);
+                                newBuffer.flip();
+                                newBuffer.put(buffer);
+                                key.attach(newBuffer);
+                            }
+//                            System.out.println();
+                        }
+                    } catch (Exception e) {
+                        key.cancel();
+                       e.printStackTrace();
+                    }
                 }
             }
         }
 
+    }
+
+    /**
+     * 向客户端写入数据
+     * @throws IOException
+     */
+    @Test
+    public void test_writing() throws IOException {
+        Selector selector = Selector.open();
+        ServerSocketChannel ssc = ServerSocketChannel.open();
+        ssc.configureBlocking(false);//非阻塞模式
+        ssc.register(selector,SelectionKey.OP_ACCEPT,null);
+        ssc.bind(new InetSocketAddress(8080));
+        while (true){
+            selector.select();
+            Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
+            while(iterator.hasNext()){
+                SelectionKey key = iterator.next();
+                iterator.remove();
+                if (key.isAcceptable()){
+                    SocketChannel sc = ssc.accept();
+                    sc.configureBlocking(false);//非阻塞
+                    SelectionKey scKey = sc.register(selector, SelectionKey.OP_READ, null);
+                    //构建内容
+                    StringBuilder stringBuilder = new StringBuilder();
+                    for (int i = 0; i < 10000000; i++) {
+                        stringBuilder.append("a");
+                    }
+
+                    ByteBuffer buffer = Charset.defaultCharset().encode(stringBuilder.toString());
+                    //先写
+                    int write = sc.write(buffer);
+                    System.out.println("第一次写入的数量是"+write);
+
+                    if (buffer.hasRemaining()){
+                        scKey.interestOps(SelectionKey.OP_READ+SelectionKey.OP_WRITE);
+                        scKey.attach(buffer);
+                    }
+                } else if (key.isWritable()) {
+                    ByteBuffer buffer = (ByteBuffer) key.attachment();
+                    SocketChannel channel = (SocketChannel) key.channel();
+                    int write = channel.write(buffer);
+                    System.out.println("继续写入"+write);
+                    if (!buffer.hasRemaining()){
+                        //写完就释放
+                        key.attach(null);
+                        key.interestOps(key.interestOps()-SelectionKey.OP_WRITE);
+                    }
+                }
+//                    while (buffer.hasRemaining()){
+//                        int write = sc.write(buffer);//实际写入的字符数
+//                        System.out.println("write = " + write);
+//                    }
+
+
+            }
+        }
     }
 }
