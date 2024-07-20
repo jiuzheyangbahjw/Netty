@@ -10,6 +10,7 @@ import java.nio.channels.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author DYss东阳书生
@@ -26,6 +27,12 @@ public class workerTest {
         SelectionKey bossKey = ssc.register(boss,0,null);  //将channel与selector关联起来
         bossKey.interestOps(SelectionKey.OP_ACCEPT);
         ssc.bind(new InetSocketAddress(8080));
+//        Worker[] workers=new Worker[10];
+//        Worker[] workers=new Worker[Runtime.getRuntime().availableProcessors()];
+//        for (int i = 0; i < workers.length; i++) {
+//            workers[i]=new Worker("worker-"+i);
+//        }
+//        AtomicInteger index=new AtomicInteger();
         Worker worker = new Worker("worker01");
         // 1 创建固定数量的worker并初始化
         while(true){
@@ -40,6 +47,7 @@ public class workerTest {
                     System.out.println("与远程"+sc.getRemoteAddress()+"建立连接");
                     System.out.println("事件建立连接前");
                     worker.register(sc);
+//                    workers[index.getAndIncrement()%workers.length].register(sc);
                //     sc.register(worker.selector,SelectionKey.OP_READ,null);  //线程顺序问题
                     System.out.println("事件建立连接后 ");
                 }
