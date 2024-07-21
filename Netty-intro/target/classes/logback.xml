@@ -8,4 +8,8 @@
     <root level="info">
         <appender-ref ref="STDOUT" />
     </root>
+
+    <logger name="io.netty.handler.logging.LoggingHandler" level="info" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
 </configuration>

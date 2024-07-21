@@ -1,4 +1,4 @@
-package dyss.shop.intro;
+package dyss.shop.intro.V1;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelInitializer;
