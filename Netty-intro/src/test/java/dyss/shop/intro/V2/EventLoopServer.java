@@ -54,10 +54,12 @@ public class EventLoopServer {
                         ch.pipeline().addLast("handler1",new ChannelInboundHandlerAdapter() {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+//                                ch.alloc().buffer().writeBytes("12213".getBytes());  alloc是分配一个ByteBuf对象。
                                 ByteBuf buf = (ByteBuf) msg;
                                 log.info(buf.toString(Charset.defaultCharset()));
                                 System.out.println(buf.toString(Charset.defaultCharset()));
                                 ctx.fireChannelRead(msg);
+//                                super,channelRead(ctx,msg); super方法也会调用
                             }
                         }).addLast(group,"handler2",new ChannelInboundHandlerAdapter(){
                             @Override
